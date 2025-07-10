@@ -1,6 +1,6 @@
 # ui/ascii_definitions.py
 """
-Centralized ASCII character and visual effect definitions for the RPG with layered elevation system.
+Centralized ASCII character and visual effect definitions for the RPG with overlay system.
 This module handles all character symbols, colors, animations, and visual effects.
 """
 import pygame
@@ -86,18 +86,13 @@ class CharacterCycle(VisualEffect):
         return self.chars[index]
 
 class AsciiTile:
-    """Represents a single ASCII tile with potential effects."""
-    def __init__(self, char, color, solid=False, name="Unknown", biome="none", 
-                 background_char=None, background_color=None):
+    """Represents a single ASCII tile with potential effects and overlays."""
+    def __init__(self, char, color, solid=False, name="Unknown", biome="none"):
         self.base_char = char
         self.base_color = color
         self.solid = solid
         self.name = name
         self.biome = biome
-        
-        # Optional background layer
-        self.background_char = background_char
-        self.background_color = background_color
         
         # Effects
         self.color_effect = None
@@ -145,7 +140,7 @@ class AsciiTile:
         """Get the current character and color for rendering."""
         self.update_effects()
         
-        # Determine character
+        # Determine character and color - overlays take priority
         if self.overlay_chars:
             # Use the most recent overlay
             char = self.overlay_chars[-1]['char']
@@ -157,41 +152,13 @@ class AsciiTile:
             char = self.base_char
             color = self.color_effect.get_current_color() if self.color_effect else self.base_color
         
-        # Background info
-        bg_char = self.background_char
-        bg_color = self.background_color
-        
         return {
             'char': char,
             'color': color,
-            'background_char': bg_char,
-            'background_color': bg_color,
             'solid': self.solid,
             'name': self.name,
             'biome': self.biome
         }
-
-class LayeredTile(AsciiTile):
-    """Extended tile class for layered rendering with elevation."""
-    def __init__(self, foreground_char, foreground_color, elevation_char, elevation_color,
-                 solid=False, name="Unknown", biome="none", elevation_level=0):
-        super().__init__(foreground_char, foreground_color, solid, name, biome)
-        
-        # Elevation layer (background)
-        self.elevation_char = elevation_char
-        self.elevation_color = elevation_color
-        self.elevation_level = elevation_level  # 0=sea level, 1=low, 2=medium, 3=high, 4=mountains
-    
-    def get_render_info(self):
-        """Get rendering info with both layers."""
-        base_info = super().get_render_info()
-        
-        # Add elevation background
-        base_info['elevation_char'] = self.elevation_char
-        base_info['elevation_color'] = self.elevation_color
-        base_info['elevation_level'] = self.elevation_level
-        
-        return base_info
 
 class AsciiDefinitions:
     """Central repository for all ASCII definitions and visual effects."""
@@ -213,92 +180,49 @@ class AsciiDefinitions:
         self._init_effect_definitions()
     
     def _init_terrain_tiles(self):
-        """Initialize layered terrain with elevation backgrounds."""
-        
-        # ELEVATION COLORS (get darker/lighter based on height)
-        ELEVATION_COLORS = {
-            0: (40, 60, 80),     # Sea level - dark blue
-            1: (60, 80, 50),     # Low elevation - dark green
-            2: (80, 100, 60),    # Medium elevation - medium green  
-            3: (100, 120, 80),   # High elevation - light green
-            4: (120, 140, 100),  # Very high - pale green
-            5: (140, 140, 120),  # Mountain level - gray-green
-        }
-        
-        # ELEVATION CHARACTERS (density indicates height)
-        ELEVATION_CHARS = {
-            0: ' ',    # Sea level - water (no background)
-            1: '░',    # Low elevation - light shade
-            2: '▒',    # Medium elevation - medium shade  
-            3: '▓',    # High elevation - dark shade
-            4: '█',    # Very high - solid block
-            5: '█',    # Mountain level - solid block
-        }
+        """Initialize terrain tiles with clean, single-layer design."""
         
         self.tiles.update({
-            # WATER - No elevation background needed
-            'ocean': LayeredTile('~', (100, 149, 237), ' ', (0, 0, 0), 
-                               solid=True, name='Ocean', biome='ocean', elevation_level=0),
-            'river': LayeredTile('~', (64, 164, 223), ' ', (0, 0, 0),
-                               solid=True, name='River', biome='river', elevation_level=0),
-            'lake': LayeredTile('~', (100, 149, 237), ' ', (0, 0, 0),
-                              solid=True, name='Lake', biome='lake', elevation_level=0),
+            # WATER BIOMES
+            'ocean': AsciiTile('~', (100, 149, 237), solid=True, name='Ocean', biome='ocean'),
+            'river': AsciiTile('~', (64, 164, 223), solid=True, name='River', biome='river'),
+            'lake': AsciiTile('~', (100, 149, 237), solid=True, name='Lake', biome='lake'),
             
-            # LOW ELEVATION BIOMES (elevation 1-2)
-            'grasslands': LayeredTile(' ', (255, 255, 255), '▒', (80, 120, 60),
-                                    solid=False, name='Grasslands', biome='plains', elevation_level=2),
-            'dense_grasslands': LayeredTile('░', (100, 180, 100), '▒', (90, 130, 70),
-                                          solid=False, name='Dense Grasslands', biome='plains', elevation_level=2),
+            # GRASSLAND BIOMES
+            'grasslands': AsciiTile(',', (124, 180, 90), solid=False, name='Grasslands', biome='plains'),
+            'dense_grasslands': AsciiTile('░', (100, 180, 100), solid=False, name='Dense Grasslands', biome='plains'),
             
-            # FOREST BIOMES (elevation 2-3)
-            'deciduous_forest': LayeredTile('♣', (34, 139, 34), '▒', (60, 100, 40),
-                                          solid=False, name='Deciduous Forest', biome='forest', elevation_level=2),
-            'coniferous_forest': LayeredTile('♠', (25, 100, 25), '▓', (70, 110, 50),
-                                           solid=False, name='Coniferous Forest', biome='forest', elevation_level=3),
+            # FOREST BIOMES
+            'deciduous_forest': AsciiTile('♣', (34, 139, 34), solid=False, name='Deciduous Forest', biome='forest'),
+            'coniferous_forest': AsciiTile('♠', (25, 100, 25), solid=False, name='Coniferous Forest', biome='forest'),
             
-            # JUNGLE BIOMES (elevation 1-2)
-            'jungle': LayeredTile('Ψ', (85, 107, 47), '▒', (65, 85, 35),
-                                solid=False, name='Jungle', biome='jungle', elevation_level=2),
-            'dense_jungle': LayeredTile('¶', (107, 142, 35), '▒', (75, 95, 45),
-                                      solid=False, name='Dense Jungle', biome='jungle', elevation_level=2),
+            # JUNGLE BIOMES
+            'jungle': AsciiTile('Ψ', (85, 107, 47), solid=False, name='Jungle', biome='jungle'),
+            'dense_jungle': AsciiTile('¶', (107, 142, 35), solid=False, name='Dense Jungle', biome='jungle'),
             
-            # DESERT BIOMES (elevation 1-3)
-            'desert': LayeredTile('≈', (255, 218, 100), '░', (200, 180, 120),
-                                solid=False, name='Desert', biome='desert', elevation_level=1),
-            'sandy_desert': LayeredTile('≋', (255, 228, 150), '▒', (220, 200, 140),
-                                      solid=False, name='Sandy Desert', biome='desert', elevation_level=2),
-            'high_desert': LayeredTile('∴', (240, 200, 120), '▓', (180, 160, 100),
-                                     solid=False, name='High Desert', biome='desert', elevation_level=3),
+            # DESERT BIOMES
+            'desert': AsciiTile('≈', (255, 218, 100), solid=False, name='Desert', biome='desert'),
+            'sandy_desert': AsciiTile('≋', (255, 228, 150), solid=False, name='Sandy Desert', biome='desert'),
+            'high_desert': AsciiTile('∴', (240, 200, 120), solid=False, name='High Desert', biome='desert'),
             
-            # HILL BIOMES (elevation 3-4) - THIS FIXES YOUR PROBLEM!
-            'hills': LayeredTile('∩', (160, 140, 100), '▓', (120, 140, 80),
-                               solid=False, name='Hills', biome='mountains', elevation_level=3),
-            'grassy_hills': LayeredTile('⌒', (140, 180, 120), '▓', (100, 160, 90),
-                                      solid=False, name='Grassy Hills', biome='mountains', elevation_level=3),
-            'rocky_hills': LayeredTile('∧', (140, 120, 100), '▓', (100, 120, 80),
-                                     solid=False, name='Rocky Hills', biome='mountains', elevation_level=3),
-            'forested_hills': LayeredTile('♠', (100, 140, 80), '▓', (80, 120, 60),
-                                        solid=False, name='Forested Hills', biome='forest', elevation_level=3),
+            # HILL BIOMES
+            'hills': AsciiTile('∩', (160, 140, 100), solid=False, name='Hills', biome='mountains'),
+            'grassy_hills': AsciiTile('⌒', (140, 180, 120), solid=False, name='Grassy Hills', biome='mountains'),
+            'rocky_hills': AsciiTile('∧', (140, 120, 100), solid=False, name='Rocky Hills', biome='mountains'),
+            'forested_hills': AsciiTile('♠', (100, 140, 80), solid=False, name='Forested Hills', biome='forest'),
             
-            # MOUNTAIN BIOMES (elevation 4-5)
-            'mountains': LayeredTile('▲', (169, 169, 169), '█', (100, 100, 100),
-                                   solid=True, name='Mountains', biome='mountains', elevation_level=4),
-            'high_mountains': LayeredTile('△', (200, 200, 200), '█', (120, 120, 120),
-                                        solid=True, name='High Mountains', biome='mountains', elevation_level=5),
+            # MOUNTAIN BIOMES
+            'mountains': AsciiTile('▲', (169, 169, 169), solid=True, name='Mountains', biome='mountains'),
+            'high_mountains': AsciiTile('△', (200, 200, 200), solid=True, name='High Mountains', biome='mountains'),
             
-            # SWAMP BIOMES (elevation 0-1)
-            'swamp': LayeredTile('~', (107, 142, 35), '░', (85, 107, 47),
-                               solid=False, name='Swamp', biome='swamp', elevation_level=1),
-            'deep_swamp': LayeredTile('≈', (85, 107, 47), '░', (65, 87, 27),
-                                    solid=False, name='Deep Swamp', biome='swamp', elevation_level=1),
+            # SWAMP BIOMES
+            'swamp': AsciiTile('≈', (107, 142, 35), solid=False, name='Swamp', biome='swamp'),
+            'deep_swamp': AsciiTile('~', (85, 107, 47), solid=False, name='Deep Swamp', biome='swamp'),
             
-            # BARREN BIOMES (elevation 2-4)
-            'barren': LayeredTile('∴', (139, 137, 137), '▒', (100, 100, 100),
-                                solid=False, name='Barren Land', biome='barren', elevation_level=2),
-            'wasteland': LayeredTile('∵', (120, 120, 120), '▓', (80, 80, 80),
-                                   solid=False, name='Wasteland', biome='barren', elevation_level=3),
-            'high_barren': LayeredTile('◦', (160, 160, 160), '▓', (120, 120, 120),
-                                     solid=False, name='High Barren', biome='barren', elevation_level=4),
+            # BARREN BIOMES
+            'barren': AsciiTile('∴', (139, 137, 137), solid=False, name='Barren Land', biome='barren'),
+            'wasteland': AsciiTile('∵', (120, 120, 120), solid=False, name='Wasteland', biome='barren'),
+            'high_barren': AsciiTile('◦', (160, 160, 160), solid=False, name='High Barren', biome='barren'),
         })
         
         # Add water animation
@@ -310,25 +234,32 @@ class AsciiDefinitions:
         self.tiles['desert'].add_char_effect(desert_shimmer)
     
     def _init_building_tiles(self):
-        """Initialize building and settlement tiles with elevation."""
+        """Initialize building and settlement tiles."""
         self.tiles.update({
-            # SETTLEMENT BIOMES (elevation 1-3)
-            'road': LayeredTile('▓', (139, 121, 94), '▒', (100, 120, 80),
-                              solid=False, name='Road', biome='settled', elevation_level=2),
-            'settled_land': LayeredTile('▒', (160, 140, 100), '▒', (120, 140, 90),
-                                      solid=False, name='Settled Land', biome='settled', elevation_level=2),
+            # SETTLEMENT BIOMES
+            'road': AsciiTile('▓', (139, 121, 94), solid=False, name='Road', biome='settled'),
+            'settled_land': AsciiTile('▒', (160, 140, 100), solid=False, name='Settled Land', biome='settled'),
             
-            # BUILDINGS (inherit elevation from underlying terrain)
-            'house': LayeredTile('⌂', (139, 121, 94), '▒', (120, 140, 90),
-                               solid=True, name='House', biome='settled', elevation_level=2),
-            'tavern': LayeredTile('∏', (160, 140, 100), '▒', (120, 140, 90),
-                                solid=True, name='Tavern', biome='settled', elevation_level=2),
-            'forge': LayeredTile('⚙', (180, 140, 100), '▒', (120, 140, 90),
-                               solid=True, name='Forge', biome='settled', elevation_level=2),
-            'castle': LayeredTile('♜', (200, 200, 200), '▓', (140, 140, 140),
-                                solid=True, name='Castle', biome='settled', elevation_level=3),
-            'tower': LayeredTile('♖', (180, 180, 180), '▓', (120, 120, 120),
-                               solid=True, name='Tower', biome='settled', elevation_level=3),
+            # BUILDING EXTERIORS
+            'house': AsciiTile('⌂', (139, 121, 94), solid=True, name='House', biome='settled'),
+            'tavern': AsciiTile('∏', (160, 140, 100), solid=True, name='Tavern', biome='settled'),
+            'forge': AsciiTile('⚙', (180, 140, 100), solid=True, name='Forge', biome='settled'),
+            'castle': AsciiTile('♜', (200, 200, 200), solid=True, name='Castle', biome='settled'),
+            'tower': AsciiTile('♖', (180, 180, 180), solid=True, name='Tower', biome='settled'),
+            
+            # BUILDING ROOFS (used by building system)
+            'house_roof': AsciiTile('█', (139, 121, 94), solid=True, name='House Roof', biome='settled'),
+            'tavern_roof': AsciiTile('█', (160, 140, 100), solid=True, name='Tavern Roof', biome='settled'),
+            'forge_roof': AsciiTile('█', (180, 140, 100), solid=True, name='Forge Roof', biome='settled'),
+            'castle_roof': AsciiTile('█', (200, 200, 200), solid=True, name='Castle Roof', biome='settled'),
+            'tower_roof': AsciiTile('█', (180, 180, 180), solid=True, name='Tower Roof', biome='settled'),
+            
+            # BUILDING DOORS (always visible)
+            'house_door': AsciiTile('+', (139, 69, 19), solid=False, name='House Door', biome='settled'),
+            'tavern_door': AsciiTile('+', (139, 69, 19), solid=False, name='Tavern Door', biome='settled'),
+            'forge_door': AsciiTile('+', (139, 69, 19), solid=False, name='Forge Door', biome='settled'),
+            'castle_door': AsciiTile('+', (139, 69, 19), solid=False, name='Castle Door', biome='settled'),
+            'tower_door': AsciiTile('+', (139, 69, 19), solid=False, name='Tower Door', biome='settled'),
         })
         
         # Add forge animation (glowing)
@@ -336,21 +267,18 @@ class AsciiDefinitions:
         self.tiles['forge'].add_color_effect(forge_glow)
     
     def _init_special_tiles(self):
-        """Initialize special tiles like dungeons, treasures with elevation."""
+        """Initialize special tiles like dungeons, treasures."""
         self.tiles.update({
             # SPECIAL TILES
-            'dungeon_entrance': LayeredTile('<', (255, 255, 255), '▓', (60, 60, 60),
-                                          solid=False, name='Dungeon Entrance', biome='dungeon', elevation_level=3),
-            'dungeon_exit': LayeredTile('>', (255, 255, 255), '▓', (60, 60, 60),
-                                      solid=False, name='Dungeon Exit', biome='dungeon', elevation_level=3),
-            'treasure_chest': LayeredTile('$', (255, 215, 0), '▒', (120, 140, 90),
-                                        solid=False, name='Treasure Chest', biome='special', elevation_level=2),
+            'dungeon_entrance': AsciiTile('<', (255, 255, 255), solid=False, name='Dungeon Entrance', biome='dungeon'),
+            'dungeon_exit': AsciiTile('>', (255, 255, 255), solid=False, name='Dungeon Exit', biome='dungeon'),
+            'treasure_chest': AsciiTile('$', (255, 215, 0), solid=False, name='Treasure Chest', biome='special'),
             
-            # DUNGEON TILES (no elevation)
-            'dungeon_floor': LayeredTile('.', (139, 121, 94), ' ', (0, 0, 0),
-                                       solid=False, name='Floor', biome='dungeon', elevation_level=0),
-            'dungeon_wall': LayeredTile('#', (100, 100, 100), ' ', (0, 0, 0),
-                                      solid=True, name='Wall', biome='dungeon', elevation_level=0),
+            # DUNGEON TILES
+            'dungeon_floor': AsciiTile('.', (139, 121, 94), solid=False, name='Floor', biome='dungeon'),
+            'dungeon_wall': AsciiTile('#', (100, 100, 100), solid=True, name='Wall', biome='dungeon'),
+            'stairs_up': AsciiTile('<', (255, 255, 255), solid=False, name='Stairs Up', biome='dungeon'),
+            'stairs_down': AsciiTile('>', (255, 255, 255), solid=False, name='Stairs Down', biome='dungeon'),
         })
         
         # Add treasure chest sparkle

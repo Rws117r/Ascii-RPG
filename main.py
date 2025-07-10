@@ -1,6 +1,6 @@
 # main.py
 """
-ASCII RPG with complete encounter and combat system using centralized ASCII definitions.
+ASCII RPG with complete encounter, combat system, and building system using centralized ASCII definitions.
 """
 import pygame
 import sys
@@ -44,7 +44,7 @@ from systems.encounters import EncounterDisplay
 from ui.encounter_ui import draw_encounter_screen, draw_encounter_options, draw_combat_screen, draw_combat_actions, draw_combat_help
 
 class Game:
-    """Main game class that manages all game states with visual effects."""
+    """Main game class that manages all game states with visual effects and building system."""
     
     def __init__(self):
         pygame.init()
@@ -317,7 +317,7 @@ class Game:
             self.character_creation = None
 
     def handle_playing_events(self, event):
-        """Handle in-game events with spell casting support."""
+        """Handle in-game events with building system support."""
         # Check if any panels are open
         is_panel_open = (self.status_panel.state != 'CLOSED' or 
                         self.inventory_panel.state != 'CLOSED')
@@ -346,6 +346,12 @@ class Game:
                     self.cast_spell('heal', self.player.x, self.player.y)
                 elif event.key == pygame.K_4:  # Smoke (demo)
                     self.add_spell_effect(self.player.x, self.player.y, 'smoke', 3000)
+                
+                # Handle building/dungeon interactions
+                elif event.key == pygame.K_RETURN:
+                    if self.world.handle_player_interaction(self.player):
+                        # Location changed, update camera if needed
+                        pass
             
             # Handle main game input
             result = self.event_handler.handle_main_game_input(
@@ -400,8 +406,8 @@ class Game:
             # Handle movement
             moved = self.event_handler.handle_movement(self.player, self.world)
             
-            # Check for random encounters when moving
-            if moved and self.encounter_handler:
+            # Check for random encounters when moving (only in overworld)
+            if moved and self.encounter_handler and self.player.location == 'overworld':
                 try:
                     current_time = pygame.time.get_ticks()
                     encounter = self.encounter_handler.check_for_encounter(
@@ -496,17 +502,17 @@ class Game:
             self.screen.blit(text_surf, text_rect)
 
     def draw_playing(self):
-        """Draw the playing state with enhanced visuals."""
+        """Draw the playing state with building system support."""
         self.screen.fill(C_BACKGROUND)
         
         # Update camera
         self.camera.update(self.player)
         
-        # Draw world (now with enhanced ASCII and effects)
+        # Draw world using new system (handles overworld/interior/dungeon automatically)
         self.world_surface.fill(C_BACKGROUND)
-        self.world.draw(self.world_surface, self.tile_font, self.camera, self.player.location)
+        self.world.draw(self.world_surface, self.tile_font, self.camera, self.player)
         
-        # Draw player with effects
+        # Draw player
         player_screen_x = (self.player.x - self.camera.x) * TILE_SIZE
         player_screen_y = (self.player.y - self.camera.y) * TILE_SIZE
         
@@ -539,17 +545,19 @@ class Game:
 
         # Draw prompts and dialogs
         action_prompt_text = self.world.get_action_prompt(
-            self.player.x, self.player.y, self.player.location)
+            self.player.x, self.player.y, self.player)
         if self.game_state == 'item_prompt' and action_prompt_text:
             draw_action_prompt(self.screen, action_prompt_text, self.ui_font)
         elif self.game_state == 'looking':
             look_desc = self.world.get_description(
-                self.look_cursor_pos[0], self.look_cursor_pos[1], self.player.location)
+                self.look_cursor_pos[0], self.look_cursor_pos[1], self.player)
             draw_action_prompt(self.screen, look_desc, self.ui_font)
+        elif action_prompt_text:  # Show building/dungeon prompts
+            draw_action_prompt(self.screen, action_prompt_text, self.ui_font)
         
         # Draw spell casting help
         if self.game_state == 'playing':
-            help_text = "Spells: 1-Fireball 2-Magic Missile 3-Heal 4-Smoke"
+            help_text = "Spells: 1-Fireball 2-Magic Missile 3-Heal 4-Smoke | ENTER-Interact"
             help_surf = self.ui_font.render(help_text, True, C_TEXT_DIM)
             self.screen.blit(help_surf, (10, SCREEN_HEIGHT - 30))
         
@@ -571,6 +579,7 @@ class Game:
     def start_new_game(self, character):
         """Start a new game with the created character."""
         try:
+            print("Starting new game...")
             # Initialize game objects
             self.world = World(WORLD_WIDTH, WORLD_HEIGHT)
             self.player = Player(self.world.start_pos[0], self.world.start_pos[1])
@@ -589,8 +598,10 @@ class Game:
             self.look_cursor_pos = [0, 0]
 
             self.state = 'playing'
+            print("Game started successfully!")
             
         except Exception as e:
+            print(f"Error starting new game: {e}")
             self.state = 'menu'
             self.character_creation = None
 

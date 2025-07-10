@@ -1,0 +1,160 @@
+{
+  "timestamp": "2025-07-10T17:07:33.428622",
+  "character_name": "Ryan",
+  "character_class": "Fighter",
+  "level": 1,
+  "xp": 0,
+  "hp": 10,
+  "max_hp": 10,
+  "ability_scores": {
+    "str": 12,
+    "dex": 10,
+    "con": 11,
+    "int": 14,
+    "wis": 14,
+    "cha": 13
+  },
+  "thac0": 19,
+  "saving_throws": {
+    "death": 12,
+    "wands": 13,
+    "paralysis": 14,
+    "breath": 15,
+    "spells": 16
+  },
+  "player_x": 38,
+  "player_y": 42,
+  "location": "overworld",
+  "overworld_pos": [
+    78,
+    87
+  ],
+  "inventory": [],
+  "equipped": {
+    "helmet": null,
+    "cuirass": null,
+    "greaves": null,
+    "boots": null,
+    "left_glove": null,
+    "right_glove": null,
+    "weapon": null,
+    "shield": null
+  },
+  "world_seed": null,
+  "treasure_chests": [
+    {
+      "pos": [
+        141,
+        27
+      ],
+      "item": {
+        "name": "Rusty Sword",
+        "char": "\u2020",
+        "color": [
+          156,
+          219,
+          67
+        ],
+        "slot": "weapon",
+        "item_type": "weapon",
+        "hands": 1,
+        "damage": "1d8",
+        "defense": 0
+      }
+    },
+    {
+      "pos": [
+        47,
+        72
+      ],
+      "item": {
+        "name": "Worn Boots",
+        "char": "[ ]",
+        "color": [
+          214,
+          242,
+          100
+        ],
+        "slot": "boots",
+        "item_type": "armor",
+        "hands": 1,
+        "damage": "1d6",
+        "defense": 1
+      }
+    },
+    {
+      "pos": [
+        113,
+        102
+      ],
+      "item": {
+        "name": "Steel Cuirass",
+        "char": "[ ]",
+        "color": [
+          214,
+          242,
+          100
+        ],
+        "slot": "cuirass",
+        "item_type": "armor",
+        "hands": 1,
+        "damage": "1d6",
+        "defense": 3
+      }
+    }
+  ],
+  "world_modifications": {},
+  "dungeon_rooms": 25,
+  "entrances": [
+    {
+      "overworld": [
+        132,
+        36
+      ],
+      "dungeon": [
+        138,
+        29
+      ]
+    },
+    {
+      "overworld": [
+        90,
+        102
+      ],
+      "dungeon": [
+        52,
+        134
+      ]
+    },
+    {
+      "overworld": [
+        14,
+        6
+      ],
+      "dungeon": [
+        102,
+        21
+      ]
+    },
+    {
+      "overworld": [
+        42,
+        77
+      ],
+      "dungeon": [
+        47,
+        71
+      ]
+    },
+    {
+      "overworld": [
+        57,
+        61
+      ],
+      "dungeon": [
+        83,
+        143
+      ]
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 # entities/player.py
 """
-Player class using centralized ASCII definitions.
+Player class using centralized ASCII definitions with building system support.
 """
 from entities.character import Character
 from ui.ascii_definitions import ASCII_DEFS
@@ -17,7 +17,7 @@ class Player:
         self.color = player_def['color']
         
         self.character = Character()
-        self.location = 'overworld'
+        self.location = 'overworld'  # 'overworld', 'building_interior', 'dungeon'
         self.overworld_pos = (x, y)
         
         # Visual effects
@@ -57,37 +57,38 @@ class Player:
         return {'char': char, 'color': color}
 
     def move(self, dx, dy, world):
-        """Move the player and handle location transitions."""
-        if self.location == 'overworld':
+        """Move the player and handle location transitions with building system support."""
+        # Get current location info
+        current_location = world.location_manager.current_location
+        
+        if current_location == 'overworld':
             current_map = world.overworld_tile_ids
-        else:
+            max_x = world.width
+            max_y = world.height
+        elif current_location == 'building_interior':
+            if world.building_manager.current_building:
+                current_map = world.building_manager.current_building['interior_map']
+                max_x = world.building_manager.current_building['interior_size'][0]
+                max_y = world.building_manager.current_building['interior_size'][1]
+            else:
+                return  # No building to move in
+        elif current_location == 'dungeon':
             current_map = world.dungeon_tile_ids
+            max_x = world.width
+            max_y = world.height
+        else:
+            return
             
         new_x, new_y = self.x + dx, self.y + dy
         
-        if 0 <= new_x < world.width and 0 <= new_y < world.height:
-            target_tile_id = current_map[new_y][new_x]
-            
-            # Handle dungeon entrance
-            if target_tile_id == 'dungeon_entrance' and self.location == 'overworld':
-                self.location = 'dungeon'
-                self.overworld_pos = (self.x, self.y)
-                for entrance in world.entrances:
-                    if entrance['overworld'] == (new_x, new_y):
-                        self.x, self.y = entrance['dungeon']
-                        break
-            
-            # Handle dungeon exit
-            elif target_tile_id == 'dungeon_exit' and self.location == 'dungeon':
-                self.location = 'overworld'
-                for entrance in world.entrances:
-                    if entrance['dungeon'] == (new_x, new_y):
-                        self.x, self.y = entrance['overworld']
-                        break
-            
-            # Normal movement
-            elif not world.is_solid(new_x, new_y, self.location):
+        # Check bounds
+        if 0 <= new_x < max_x and 0 <= new_y < max_y:
+            # Check if tile is solid
+            if not world.is_solid(new_x, new_y, self):
                 self.x, self.y = new_x, new_y
+                
+                # Update location string for compatibility
+                self.location = current_location
 
     def add_to_inventory(self, item):
         """Add an item to the player's inventory."""
